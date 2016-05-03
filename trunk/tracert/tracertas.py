@@ -1,9 +1,12 @@
+import re
 import socket
 import argparse
-from select import select
+import struct
 from sockets import *
-import re
+from select import select
 
+# import sys
+# sys.argv.append('vk.com')
 
 regexp_iana = re.compile('whois:(.+)')
 
@@ -22,8 +25,12 @@ def recv_msg(sock):
     return msg
 
 
-def traceroute(dest_name, max_hops=10, port=35353):
-    dest_addr = socket.gethostbyname(dest_name)
+def traceroute(dest_name, max_hops=10, port=33535):
+    try:
+        dest_addr = socket.gethostbyname(dest_name)
+    except socket.gaierror:
+        print("Hostname %s doesn't exist" % dest_name)
+        return
 
     for ttl in range(1, max_hops + 1):
         cur_addr = ''
@@ -36,7 +43,9 @@ def traceroute(dest_name, max_hops=10, port=35353):
                 send_socket.sendto(b'', (dest_name, port))
 
                 try:
-                    cur_addr = recv_socket.recvfrom(1024)[1][0]
+                    data, addr = recv_socket.recvfrom(512)
+                    print(data, addr)
+                    cur_addr = addr[0]
                 except socket.error:
                     pass
         except socket.error:
@@ -107,8 +116,6 @@ def get_info(server, ip_addr):
 
 
 def main(dest_name):
-    # t = Tracer(dest_name)
-    # t.run()
     for i, addr in enumerate(traceroute(dest_name)):
         info = {}
         if addr:
